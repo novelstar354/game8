@@ -6,9 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 *{box-sizing:border-box;touch-action:none;}
-body{
-  margin:0;background:#111;color:#fff;font-family:sans-serif;
-}
+body{margin:0;background:#111;color:#fff;font-family:sans-serif;}
 #top{display:flex;justify-content:space-between;padding:6px;background:#222;font-size:14px}
 .bar{width:110px;height:10px;background:#333;border-radius:10px;overflow:hidden}
 .bar>div{height:100%;background:linear-gradient(to right,#0f0,#6f6)}
@@ -16,8 +14,7 @@ body{
 
 #board{
   width:95vw;max-width:420px;height:360px;
-  margin:auto;
-  display:grid;
+  margin:auto;display:grid;
   grid-template-columns:repeat(6,1fr);
   grid-template-rows:repeat(5,1fr);
   gap:4px;
@@ -29,40 +26,42 @@ body{
 .light{background:#ff5}
 .dark{background:#b5f}
 
-#combo{
-  position:absolute;top:60px;width:100%;
-  text-align:center;font-size:36px;color:gold;opacity:0;
-}
+#enemyInfo{text-align:center;font-size:13px;margin:6px 0}
 
-#turnText{
-  position:fixed;top:40%;width:100%;
-  text-align:center;font-size:42px;
-  opacity:0;font-weight:bold;
-}
+#combo{position:absolute;top:60px;width:100%;text-align:center;font-size:36px;color:gold;opacity:0}
+#turnText{position:fixed;top:40%;width:100%;text-align:center;font-size:42px;opacity:0;font-weight:bold}
 
 #skillBar button{
-  margin:4px;padding:8px 14px;border-radius:14px;
-  border:none;background:#333;color:#fff;
+ margin:4px;padding:8px 14px;border-radius:14px;
+ border:none;background:#333;color:#fff;
 }
 
 #result{
-  position:fixed;inset:0;
-  background:rgba(0,0,0,.85);
-  display:none;
-  justify-content:center;
-  align-items:center;
-  text-align:center;
+ position:fixed;inset:0;
+ background:rgba(0,0,0,.85);
+ display:none;justify-content:center;align-items:center;
 }
 </style>
 </head>
 <body>
 
 <div id="top">
-  <div>HP<div class="bar"><div id="hp"></div></div></div>
-  <div>STAGE <span id="stage">1</span></div>
-  <div>ENEMY<div class="bar" id="enemyBar"><div id="enemy"></div></div></div>
+ <div>HP<div class="bar"><div id="hp"></div></div></div>
+ <div>STAGE <span id="stage">1</span></div>
+ <div>ENEMY<div class="bar" id="enemyBar"><div id="enemy"></div></div></div>
 </div>
 
+<div style="text-align:center;margin:4px">
+ DIFFICULTY:
+ <select id="difficultySelect" onchange="changeDifficulty()">
+  <option value="easy">EASY</option>
+  <option value="normal" selected>NORMAL</option>
+  <option value="hard">HARD</option>
+  <option value="lunatic">LUNATIC</option>
+ </select>
+</div>
+
+<div id="enemyInfo"></div>
 <div id="timer" style="text-align:center">TIME: 15</div>
 <div id="combo"></div>
 <div id="turnText"></div>
@@ -70,44 +69,39 @@ body{
 <div id="board"></div>
 
 <div id="skillBar" style="text-align:center">
-  <button id="healBtn" onclick="useSkill('heal')">💚 HEAL</button>
-  <button id="breakBtn" onclick="useSkill('break')">💥 BREAK</button>
-  <button id="timeBtn" onclick="useSkill('time')">⏱ TIME</button>
+ <button id="healBtn" onclick="useSkill('heal')">💚 HEAL</button>
+ <button id="breakBtn" onclick="useSkill('break')">💥 BREAK</button>
+ <button id="timeBtn" onclick="useSkill('time')">⏱ TIME</button>
 </div>
 
 <div style="text-align:center">
-  <button onclick="saveGame()">💾 SAVE</button>
-  <button onclick="loadGame()">📂 LOAD</button>
-  <button onclick="deleteSave()">🗑 RESET</button>
+ <button onclick="saveGame()">💾 SAVE</button>
+ <button onclick="loadGame()">📂 LOAD</button>
+ <button onclick="deleteSave()">🗑 RESET</button>
 </div>
 
 <div id="result">
-  <div>
-    <h2 id="resultText"></h2>
-    <button onclick="location.reload()">RETRY</button>
-  </div>
+ <div>
+  <h2 id="resultText"></h2>
+  <button onclick="location.reload()">RETRY</button>
+ </div>
 </div>
 
 <script>
-/* ===== 基本設定 ===== */
 const ROW=5,COL=6;
 const colors=["fire","water","wood","light","dark"];
-const SAVE_KEY="PUZZLE_ULTIMATE_FULL";
+const SAVE_KEY="PUZZLE_FULL_SAVE";
 
 let board=[],stage=1,playerHP=100,enemyHP=100;
-let timer=15,timerOn=false;
-let combo=0;
-let difficulty="normal";
-let enemyAttr="fire";
+let timer=15,timerOn=false,combo=0;
+let difficulty="normal",enemyAttr="fire";
 
-/* ===== スキル ===== */
 const skills={
  heal:{cool:5,now:0},
  break:{cool:4,now:0},
  time:{cool:3,now:0}
 };
 
-/* ===== 難易度設定 ===== */
 const difficultyData={
  easy:{weak:2.5,absorb:false,null:false,reflect:false},
  normal:{weak:2,absorb:false,null:false,reflect:true},
@@ -115,7 +109,6 @@ const difficultyData={
  lunatic:{weak:3,absorb:true,null:true,reflect:true}
 };
 
-/* ===== 属性相性 ===== */
 const affinity={
  fire:{weak:"water",null:"wood",absorb:"fire",reflect:"light"},
  water:{weak:"wood",null:"fire",absorb:"water",reflect:"dark"},
@@ -124,36 +117,38 @@ const affinity={
  dark:{weak:"light",null:null,absorb:null,reflect:"light"}
 };
 
-/* ===== 初期化 ===== */
+/* ---------- 初期化 ---------- */
 function init(){
-  for(let r=0;r<ROW;r++){
-    board[r]=[];
-    for(let c=0;c<COL;c++) board[r][c]=rand();
-  }
-  newEnemy();
-  draw();
-  updateUI();
+ for(let r=0;r<ROW;r++){
+  board[r]=[];
+  for(let c=0;c<COL;c++) board[r][c]=rand();
+ }
+ newEnemy();
+ draw();
+ updateUI();
+ updateEnemyInfo();
 }
 
-/* ===== 敵生成 ===== */
+/* ---------- 敵 ---------- */
 function newEnemy(){
-  enemyHP=100+stage*25;
-  enemyAttr=colors[Math.floor(Math.random()*colors.length)];
+ enemyHP=100+stage*25;
+ enemyAttr=colors[Math.floor(Math.random()*colors.length)];
+ updateEnemyInfo();
 }
 
-/* ===== 描画 ===== */
+/* ---------- 表示 ---------- */
 function draw(){
-  const b=document.getElementById("board");
-  b.innerHTML="";
-  for(let r=0;r<ROW;r++)for(let c=0;c<COL;c++){
-    const d=document.createElement("div");
-    d.className="orb "+board[r][c];
-    d.dataset.r=r;d.dataset.c=c;
-    b.appendChild(d);
-  }
+ const b=document.getElementById("board");
+ b.innerHTML="";
+ for(let r=0;r<ROW;r++)for(let c=0;c<COL;c++){
+  const d=document.createElement("div");
+  d.className="orb "+board[r][c];
+  d.dataset.r=r;d.dataset.c=c;
+  b.appendChild(d);
+ }
 }
 
-/* ===== 入力 ===== */
+/* ---------- 入力 ---------- */
 let drag=false,last=null;
 document.addEventListener("pointerdown",e=>{
  if(!e.target.classList.contains("orb"))return;
@@ -167,21 +162,21 @@ document.addEventListener("pointermove",e=>{
  if(!t||!t.classList.contains("orb"))return;
  let r=+t.dataset.r,c=+t.dataset.c;
  if(Math.abs(r-last.r)+Math.abs(c-last.c)==1){
-   [board[r][c],board[last.r][last.c]]=[board[last.r][last.c],board[r][c]];
-   last={r,c};draw();
+  [board[r][c],board[last.r][last.c]]=[board[last.r][last.c],board[r][c]];
+  last={r,c}; draw();
  }
 });
 document.addEventListener("pointerup",()=>{drag=false;check();});
 
-/* ===== ターン ===== */
+/* ---------- ターン ---------- */
 function startTurn(){
- timer=15;
- timerOn=true;
+ timer=15; timerOn=true;
  for(let k in skills) if(skills[k].now>0) skills[k].now--;
  updateSkillUI();
  showTurn("YOUR TURN");
  tick();
 }
+
 function tick(){
  const t=setInterval(()=>{
   timer--;
@@ -190,7 +185,7 @@ function tick(){
  },1000);
 }
 
-/* ===== 判定 ===== */
+/* ---------- 判定 ---------- */
 function check(){
  let del=[];
  for(let r=0;r<ROW;r++)for(let c=0;c<COL-2;c++)
@@ -203,20 +198,20 @@ function check(){
 
  if(!del.length){combo=0;return;}
 
- combo++;
  let dmg=0;
  del.forEach(p=>{
-   dmg+=calcDamage(board[p[0]][p[1]]);
-   board[p[0]][p[1]]=null;
+  dmg+=calcDamage(board[p[0]][p[1]]);
+  board[p[0]][p[1]]=null;
  });
 
  enemyHP-=dmg;
- fall(); updateUI();
+ fall();
+ updateUI();
  if(enemyHP<=0){stage++;newEnemy();}
  setTimeout(check,150);
 }
 
-/* ===== ダメージ計算 ===== */
+/* ---------- ダメージ ---------- */
 function calcDamage(col){
  const rule=difficultyData[difficulty];
  const a=affinity[enemyAttr];
@@ -227,7 +222,7 @@ function calcDamage(col){
  return 10;
 }
 
-/* ===== 落下 ===== */
+/* ---------- 落下 ---------- */
 function fall(){
  for(let c=0;c<COL;c++){
   for(let r=ROW-1;r>=0;r--){
@@ -242,7 +237,7 @@ function fall(){
  draw();
 }
 
-/* ===== スキル ===== */
+/* ---------- スキル ---------- */
 function useSkill(t){
  if(skills[t].now>0)return;
  if(t==="heal") playerHP=Math.min(100,playerHP+30);
@@ -252,7 +247,7 @@ function useSkill(t){
  updateSkillUI();
 }
 
-/* ===== 敵ターン ===== */
+/* ---------- 敵ターン ---------- */
 function enemyTurn(){
  showTurn("ENEMY TURN");
  setTimeout(()=>{
@@ -264,7 +259,7 @@ function enemyTurn(){
  },700);
 }
 
-/* ===== UI ===== */
+/* ---------- UI ---------- */
 function updateUI(){
  document.getElementById("hp").style.width=playerHP+"%";
  document.getElementById("enemy").style.width=enemyHP+"%";
@@ -277,6 +272,17 @@ function updateSkillUI(){
   b.style.opacity=skills[k].now>0?0.5:1;
  }
 }
+function updateEnemyInfo(){
+ const a=affinity[enemyAttr];
+ const rule=difficultyData[difficulty];
+ let html=`ENEMY: <b>${enemyAttr.toUpperCase()}</b><br>`;
+ if(a.weak) html+=`WEAK: ${a.weak}<br>`;
+ if(rule.absorb && a.absorb) html+=`ABSORB: ${a.absorb}<br>`;
+ if(rule.null && a.null) html+=`NULL: ${a.null}<br>`;
+ if(rule.reflect && a.reflect) html+=`REFLECT: ${a.reflect}<br>`;
+ document.getElementById("enemyInfo").innerHTML=html;
+}
+
 function showTurn(t){
  const e=document.getElementById("turnText");
  e.textContent=t;
@@ -284,11 +290,10 @@ function showTurn(t){
  setTimeout(()=>e.style.opacity=0,600);
 }
 
-/* ===== セーブ ===== */
+/* ---------- セーブ ---------- */
 function saveGame(){
  localStorage.setItem(SAVE_KEY,JSON.stringify({
-  board,stage,playerHP,enemyHP,enemyAttr,
-  skills,timer,difficulty
+  board,stage,playerHP,enemyHP,enemyAttr,skills,timer,difficulty
  }));
 }
 function loadGame(){
@@ -297,21 +302,22 @@ function loadGame(){
  board=d.board;stage=d.stage;playerHP=d.playerHP;
  enemyHP=d.enemyHP;enemyAttr=d.enemyAttr;
  skills=d.skills;timer=d.timer;difficulty=d.difficulty;
- draw();updateUI();updateSkillUI();
-}
-function deleteSave(){
- localStorage.removeItem(SAVE_KEY);
- location.reload();
+ document.getElementById("difficultySelect").value=difficulty;
+ draw();updateUI();updateEnemyInfo();updateSkillUI();
 }
 
-/* ===== GAME OVER ===== */
+/* ---------- その他 ---------- */
+function deleteSave(){localStorage.removeItem(SAVE_KEY);location.reload();}
+function rand(){return colors[Math.floor(Math.random()*colors.length)]}
 function gameOver(){
  document.getElementById("result").style.display="flex";
  document.getElementById("resultText").textContent="GAME OVER";
 }
-
-/* ===== その他 ===== */
-function rand(){return colors[Math.floor(Math.random()*colors.length)]}
+function changeDifficulty(){
+ difficulty=document.getElementById("difficultySelect").value;
+ updateEnemyInfo();
+ saveGame();
+}
 
 /* 起動 */
 loadGame()||init();
