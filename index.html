@@ -3,19 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <title>PUZZLE BATTLE ULTIMATE</title>
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-*{box-sizing:border-box;touch-action:none;}
 body{margin:0;background:#111;color:#fff;font-family:sans-serif;overflow:hidden}
-
-button{padding:10px 16px;border:none;border-radius:14px;background:#333;color:#fff}
-
-#startScreen{
- position:fixed;inset:0;display:flex;flex-direction:column;
- justify-content:center;align-items:center;background:#000;z-index:99
-}
-#startScreen button{margin:6px;width:200px;font-size:18px}
-
 #top{display:flex;justify-content:space-between;padding:6px;background:#222}
 .bar{width:110px;height:10px;background:#333;border-radius:10px;overflow:hidden}
 .bar>div{height:100%;background:linear-gradient(to right,#0f0,#6f6)}
@@ -28,41 +18,39 @@ button{padding:10px 16px;border:none;border-radius:14px;background:#333;color:#f
  grid-template-rows:repeat(5,1fr);
  gap:4px;
 }
-
 .orb{
- width:100%;height:100%;border-radius:50%;
- box-shadow:inset -4px -4px 6px rgba(0,0,0,.4),
- inset 3px 3px 6px rgba(255,255,255,.3);
+ border-radius:50%;
+ display:flex;align-items:center;justify-content:center;
+ font-size:24px;
 }
-.fire{background:#f55}
-.water{background:#59f}
-.wood{background:#5f5}
-.light{background:#ff5}
-.dark{background:#b5f}
+.fire{background:#ff6666}
+.water{background:#4fa3ff}
+.wood{background:#44cc77}
+.light{background:#ffe066}
+.dark{background:#8c6cff}
 
-#combo{position:absolute;top:60px;width:100%;text-align:center;font-size:36px;color:gold;opacity:0}
-#turnText{position:fixed;top:40%;width:100%;text-align:center;font-size:42px;font-weight:bold;opacity:0}
+#combo{position:absolute;top:60px;width:100%;text-align:center;font-size:36px;color:gold}
+#turnText{position:fixed;top:40%;width:100%;text-align:center;font-size:42px}
 
-#enemyInfo{text-align:center;font-size:13px;margin:6px}
-
-#skillBar{text-align:center;margin:6px}
-#skillBar button{margin:4px}
+.effect{
+ position:fixed;inset:0;pointer-events:none;
+ animation:fade .6s forwards;
+}
+.absorbFx{
+ background:radial-gradient(circle at center, #00ffaa99 0%, #000 70%);
+}
+@keyframes fade{from{opacity:1}to{opacity:0}}
 
 #result{
  position:fixed;inset:0;background:rgba(0,0,0,.9);
- display:none;justify-content:center;align-items:center;
+ display:none;flex-direction:column;justify-content:center;align-items:center;
 }
+.rank{font-size:64px;color:gold;text-shadow:0 0 20px gold}
+
+button{padding:8px 14px;border-radius:20px;border:none;background:#333;color:#fff;margin:4px}
 </style>
 </head>
 <body>
-
-<div id="startScreen">
- <h2>難易度を選択</h2>
- <button onclick="startGame('easy')">EASY</button>
- <button onclick="startGame('normal')">NORMAL</button>
- <button onclick="startGame('hard')">HARD</button>
- <button onclick="startGame('lunatic')">LUNATIC</button>
-</div>
 
 <div id="top">
  <div>HP<div class="bar"><div id="hp"></div></div></div>
@@ -70,190 +58,140 @@ button{padding:10px 16px;border:none;border-radius:14px;background:#333;color:#f
  <div>ENEMY<div class="bar" id="enemyBar"><div id="enemy"></div></div></div>
 </div>
 
-<div id="enemyInfo"></div>
-<div id="timer" style="text-align:center">TIME: 15</div>
 <div id="combo"></div>
-<div id="turnText"></div>
 <div id="board"></div>
 
-<div id="skillBar">
- <button onclick="useSkill('heal')">💚 HEAL</button>
- <button onclick="useSkill('break')">💥 BREAK</button>
- <button onclick="useSkill('time')">⏱ TIME</button>
-</div>
-
-<div style="text-align:center">
- <button onclick="saveGame()">💾 SAVE</button>
- <button onclick="loadGame()">📂 LOAD</button>
-</div>
-
 <div id="result">
- <div>
-  <h2 id="resultText"></h2>
-  <button onclick="location.reload()">RETRY</button>
- </div>
+ <div class="rank" id="rankText"></div>
+ <p id="resultInfo"></p>
+ <button onclick="location.reload()">RETRY</button>
 </div>
 
 <script>
 const ROW=5,COL=6;
 const colors=["fire","water","wood","light","dark"];
-const SAVE_KEY="PUZZLE_FULL_SAVE";
+const weakness={fire:"wood",wood:"water",water:"fire",light:"dark",dark:"light"};
 
-let board=[],stage=1,playerHP=100,enemyHP=100;
-let timer=15,timerOn=false,combo=0;
-let difficulty="normal",enemyAttr="fire";
+let board=[],stage=1;
+let playerHP=100,enemyHP=100;
+let combo=0,maxCombo=0,score=0;
+let difficulty="lunatic";
 
-const difficultyData={
- easy:{dmg:0.7},
- normal:{dmg:1},
- hard:{dmg:1.4},
- lunatic:{dmg:2}
-};
-
-const affinity={
- fire:{weak:"water",null:"wood",absorb:"fire"},
- water:{weak:"wood",null:"fire",absorb:"water"},
- wood:{weak:"fire",null:"water",absorb:"wood"},
- light:{weak:"dark"},
- dark:{weak:"light"}
-};
-
-const skills={
- heal:{cool:5,now:0},
- break:{cool:4,now:0},
- time:{cool:3,now:0}
-};
-
-function startGame(d){
- difficulty=d;
- document.getElementById("startScreen").style.display="none";
- init();
-}
+function rand(){return colors[Math.floor(Math.random()*5)]}
 
 function init(){
- board=[];
- for(let r=0;r<ROW;r++){
-  board[r]=[];
-  for(let c=0;c<COL;c++) board[r][c]=rand();
- }
+ board=[...Array(ROW)].map(()=>Array(COL).fill().map(rand));
  newEnemy();
  draw();
  updateUI();
 }
 
 function newEnemy(){
- enemyAttr=colors[Math.floor(Math.random()*colors.length)];
- enemyHP=100+stage*30;
- updateEnemyInfo();
-}
-
-function updateEnemyInfo(){
- document.getElementById("enemyInfo").textContent=
-  `敵属性: ${enemyAttr} / 弱点:${affinity[enemyAttr].weak}`;
+ enemyHP=120+stage*40;
 }
 
 function draw(){
  const b=document.getElementById("board");
  b.innerHTML="";
  for(let r=0;r<ROW;r++)for(let c=0;c<COL;c++){
-  const d=document.createElement("div");
+  let d=document.createElement("div");
   d.className="orb "+board[r][c];
   d.dataset.r=r; d.dataset.c=c;
   b.appendChild(d);
  }
 }
 
-let drag=false,last=null;
+let last=null;
 document.addEventListener("pointerdown",e=>{
  if(!e.target.classList.contains("orb"))return;
- drag=true;
  last={r:+e.target.dataset.r,c:+e.target.dataset.c};
 });
 document.addEventListener("pointermove",e=>{
- if(!drag)return;
- const t=document.elementFromPoint(e.clientX,e.clientY);
+ if(!last)return;
+ let t=document.elementFromPoint(e.clientX,e.clientY);
  if(!t||!t.classList.contains("orb"))return;
  let r=+t.dataset.r,c=+t.dataset.c;
  if(Math.abs(r-last.r)+Math.abs(c-last.c)==1){
   [board[r][c],board[last.r][last.c]]=[board[last.r][last.c],board[r][c]];
-  last={r,c};
-  draw();
+  last={r,c}; draw();
  }
 });
-document.addEventListener("pointerup",()=>{drag=false;check();});
+document.addEventListener("pointerup",()=>{last=null;check();});
 
 function check(){
  let del=[];
  for(let r=0;r<ROW;r++)for(let c=0;c<COL-2;c++)
   if(board[r][c]==board[r][c+1]&&board[r][c]==board[r][c+2])
    del.push([r,c],[r,c+1],[r,c+2]);
-
  for(let c=0;c<COL;c++)for(let r=0;r<ROW-2;r++)
   if(board[r][c]==board[r+1][c]&&board[r][c]==board[r+2][c])
    del.push([r,c],[r+1,c],[r+2,c]);
 
- if(!del.length)return;
+ if(!del.length){combo=0;return;}
 
- combo++;
- let dmg=del.length*5*difficultyData[difficulty].dmg;
+ combo++; maxCombo=Math.max(maxCombo,combo);
+ let base=del.length*5;
+ let color=board[del[0][0]][del[0][1]];
+ let dmg=base;
 
- if(affinity[enemyAttr].absorb && del.some(d=>board[d[0]][d[1]]===enemyAttr)){
-  enemyHP+=dmg;
- }else{
-  enemyHP-=dmg;
+ if(weakness[color]===enemyAttr){dmg*=1.5}
+
+ // 吸収演出
+ if(color===enemyAttr){
+  enemyHP+=base;
+  showAbsorb();
+  dmg=0;
  }
+
+ enemyHP-=dmg;
+ score+=Math.floor(dmg*10);
 
  del.forEach(p=>board[p[0]][p[1]]=null);
  fall();
  updateUI();
- setTimeout(check,150);
+
+ if(enemyHP<=0){stage++;newEnemy();}
+ setTimeout(check,120);
+}
+
+function showAbsorb(){
+ let e=document.createElement("div");
+ e.className="effect absorbFx";
+ document.body.appendChild(e);
+ setTimeout(()=>e.remove(),600);
 }
 
 function fall(){
- for(let c=0;c<COL;c++){
-  for(let r=ROW-1;r>=0;r--){
+ for(let c=0;c<COL;c++)
+  for(let r=ROW-1;r>=0;r--)
    if(!board[r][c]){
-    for(let rr=r-1;rr>=0;rr--){
-     if(board[rr][c]){
-      board[r][c]=board[rr][c];
-      board[rr][c]=null;break;
-     }
-    }
+    for(let rr=r-1;rr>=0;rr--)
+     if(board[rr][c]){board[r][c]=board[rr][c];board[rr][c]=null;break;}
     if(!board[r][c]) board[r][c]=rand();
    }
-  }
- }
  draw();
-}
-
-function useSkill(type){
- const s=skills[type];
- if(s.now>0)return;
- s.now=s.cool;
- if(type==="heal") playerHP=Math.min(100,playerHP+30);
- if(type==="break") enemyHP-=40;
- if(type==="time") timer+=5;
 }
 
 function updateUI(){
  document.getElementById("hp").style.width=playerHP+"%";
  document.getElementById("enemy").style.width=enemyHP+"%";
  document.getElementById("stage").textContent=stage;
+ document.getElementById("combo").textContent=combo>1?combo+" COMBO!":"";
 }
 
-function saveGame(){
- localStorage.setItem(SAVE_KEY,JSON.stringify({
-  stage,playerHP,enemyHP,difficulty
- }));
-}
-function loadGame(){
- const d=JSON.parse(localStorage.getItem(SAVE_KEY));
- if(!d)return;
- stage=d.stage;playerHP=d.playerHP;enemyHP=d.enemyHP;difficulty=d.difficulty;
- init();
+function endGame(){
+ let rank="D";
+ if(score>=120000) rank="S";
+ else if(score>=80000) rank="A";
+ else if(score>=50000) rank="B";
+ else if(score>=20000) rank="C";
+
+ document.getElementById("rankText").textContent=rank;
+ document.getElementById("resultInfo").textContent=
+  `SCORE: ${score}\nMAX COMBO: ${maxCombo}\nSTAGE: ${stage}`;
+ document.getElementById("result").style.display="flex";
 }
 
-function rand(){return colors[Math.floor(Math.random()*colors.length)]}
 </script>
 </body>
 </html>
