@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>PUZZLE BATTLE ULTIMATE</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+*{box-sizing:border-box;touch-action:none;}
+body{margin:0;background:#111;color:#fff;font-family:sans-serif;overflow:hidden}
+
+/* ===== UI ===== */
+#top{display:flex;justify-content:space-between;padding:6px;background:#222}
+.bar{width:110px;height:10px;background:#333;border-radius:10px;overflow:hidden}
+.bar>div{height:100%;background:linear-gradient(to right,#0f0,#6f6)}
+#enemyBar>div{background:linear-gradient(to right,#f33,#a00)}
+
+#board{
+  width:95vw;max-width:420px;height:360px;
+  margin:auto;
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  grid-template-rows:repeat(5,1fr);
+  gap:4px;
+}
+
+/* ===== ORB ===== */
+.orb{
+  position:relative;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:26px;
+  color:white;
+  text-shadow:0 0 6px #fff;
+  backdrop-filter:blur(4px);
+  box-shadow:
+    inset 0 0 10px rgba(255,255,255,.6),
+    inset -6px -6px 10px rgba(0,0,0,.4),
+    0 4px 8px rgba(0,0,0,.6);
+}
+.orb::after{
+  content:"";
+  position:absolute;
+  top:8%;left:12%;
+  width:40%;height:40%;
+  background:rgba(255,255,255,.35);
+  border-radius:50%;
+  filter:blur(4px);
+}
+
+.fire{background:linear-gradient(135deg,#ff6b6b,#ff9966)}
+.water{background:linear-gradient(135deg,#4facfe,#00f2fe)}
+.wood{background:linear-gradient(135deg,#43e97b,#38f9d7)}
+.light{background:linear-gradient(135deg,#fff7a1,#ffe066)}
+.dark{background:linear-gradient(135deg,#a18cd1,#6f42c1)}
+
+#combo{position:absolute;top:60px;width:100%;text-align:center;font-size:38px;color:gold}
+#turnText{position:fixed;top:40%;width:100%;text-align:center;font-size:48px;opacity:0;transition:.4s}
+
+#skillBtn{
+  position:fixed;bottom:10px;left:50%;
+  transform:translateX(-50%);
+  padding:12px 24px;border-radius:30px;
+  background:#0af;color:white;border:none;
+}
+
+#difficultyScreen,#result{
+  position:fixed;inset:0;background:#000c;
+  display:flex;flex-direction:column;
+  justify-content:center;align-items:center;
+  z-index:999;
+}
+button{padding:12px 24px;border-radius:20px;border:none;margin:6px}
+</style>
+</head>
+<body>
+
+<!-- 難易度 -->
+<div id="difficultyScreen">
+  <h1>難易度選択</h1>
+  <button onclick="setDifficulty('easy')">EASY</button>
+  <button onclick="setDifficulty('normal')">NORMAL</button>
+  <button onclick="setDifficulty('hard')">HARD</button>
+  <button onclick="setDifficulty('hell')">HELL</button>
+</div>
+
+<div id="top">
+  <div>HP<div class="bar"><div id="hp"></div></div></div>
+  <div>STAGE <span id="stage">1</span></div>
+  <div>ENEMY<div class="bar" id="enemyBar"><div id="enemy"></div></div></div>
+</div>
+
+<div id="combo"></div>
+<div id="turnText"></div>
+<div id="board"></div>
+
+<button id="skillBtn">SKILL</button>
+
+<div id="result">
+  <div>
+    <h1 id="rank"></h1>
+    <p id="scoreText"></p>
+    <button onclick="location.reload()">RETRY</button>
+  </div>
+</div>
+
+<script>
+/* ===== 設定 ===== */
+const ROW=5,COL=6;
+const colors=["fire","water","wood","light","dark"];
+const icons={fire:"🔥",water:"💧",wood:"🌿",light:"✨",dark:"🌙"};
+const weak={fire:"wood",wood:"water",water:"fire",light:"dark",dark:"light"};
+
+const DIFF={
+ easy:{hp:0.7,atk:0.7,cd:2,score:0.8},
+ normal:{hp:1,atk:1,cd:3,score:1},
+ hard:{hp:1.4,atk:1.3,cd:4,score:1.3},
+ hell:{hp:1.8,atk:1.6,cd:5,score:1.6}
+};
+
+let difficulty="normal";
+let board=[],stage=1,playerHP=100,enemyHP=100;
+let score=0,combo=0,skillCD=0;
+let enemyState={};
+
+/* ===== 難易度 ===== */
+function setDifficulty(d){
+  difficulty=d;
+  document.getElementById("difficultyScreen").style.display="none";
+  init();
+}
+
+/* ===== 初期化 ===== */
+function init(){
+  board=[];
+  for(let r=0;r<ROW;r++){
+    board[r]=[];
+    for(let c=0;c<COL;c++) board[r][c]=colors[Math.floor(Math.random()*5)];
+  }
+  newEnemy();
+  draw();
+  updateUI();
+}
+
+/* ===== 敵生成 ===== */
+function newEnemy(){
+  enemyHP=Math.floor((120+stage*40)*DIFF[difficulty].hp);
+  enemyState={
+    absorb:Math.random()<0.3?colors[Math.floor(Math.random()*5)]:null,
+    reflect:Math.random()<0.3,
+    nullify:Math.random()<0.3?colors[Math.floor(Math.random()*5)]:null
+  };
+}
+
+/* ===== 描画 ===== */
+function draw(){
+  const b=document.getElementById("board");
+  b.innerHTML="";
+  for(let r=0;r<ROW;r++)for(let c=0;c<COL;c++){
+    const d=document.createElement("div");
+    d.className="orb "+board[r][c];
+    d.textContent=icons[board[r][c]];
+    d.dataset.r=r; d.dataset.c=c;
+    b.appendChild(d);
+  }
+}
+
+/* ===== 操作 ===== */
+let drag=false,last=null;
+document.addEventListener("pointerdown",e=>{
+  if(!e.target.classList.contains("orb"))return;
+  drag=true;
+  last={r:+e.target.dataset.r,c:+e.target.dataset.c};
+});
+document.addEventListener("pointermove",e=>{
+  if(!drag)return;
+  const t=document.elementFromPoint(e.clientX,e.clientY);
+  if(!t||!t.classList.contains("orb"))return;
+  let r=+t.dataset.r,c=+t.dataset.c;
+  if(Math.abs(r-last.r)+Math.abs(c-last.c)==1){
+    [board[r][c],board[last.r][last.c]]=[board[last.r][last.c],board[r][c]];
+    last={r,c};
+    draw();
+  }
+});
+document.addEventListener("pointerup",()=>{drag=false;check();});
+
+/* ===== 判定 ===== */
+function check(){
+  let del=[];
+  for(let r=0;r<ROW;r++)for(let c=0;c<COL-2;c++)
+    if(board[r][c]==board[r][c+1]&&board[r][c]==board[r][c+2])
+      del.push([r,c],[r,c+1],[r,c+2]);
+  for(let c=0;c<COL;c++)for(let r=0;r<ROW-2;r++)
+    if(board[r][c]==board[r+1][c]&&board[r][c]==board[r+2][c])
+      del.push([r,c],[r+1,c],[r+2,c]);
+
+  if(!del.length){enemyTurn();return;}
+
+  let dmg=0;
+  del.forEach(p=>{
+    let t=board[p[0]][p[1]];
+    let base=10;
+    if(enemyState.nullify===t) base=0;
+    if(enemyState.absorb===t){enemyHP+=base;base=0;}
+    if(enemyState.reflect) playerHP-=base/2;
+    if(weak[t]) base*=1.5;
+    dmg+=base;
+    board[p[0]][p[1]]=null;
+  });
+
+  enemyHP-=dmg;
+  score+=Math.floor(dmg*10*DIFF[difficulty].score);
+  fall();
+  draw();
+
+  if(enemyHP<=0){stage++;newEnemy();}
+}
+
+/* ===== 落下 ===== */
+function fall(){
+  for(let c=0;c<COL;c++){
+    for(let r=ROW-1;r>=0;r--){
+      if(!board[r][c]){
+        for(let rr=r-1;rr>=0;rr--){
+          if(board[rr][c]){
+            board[r][c]=board[rr][c];
+            board[rr][c]=null;
+            break;
+          }
+        }
+        if(!board[r][c]) board[r][c]=colors[Math.floor(Math.random()*5)];
+      }
+    }
+  }
+}
+
+/* ===== スキル ===== */
+document.getElementById("skillBtn").onclick=()=>{
+  if(skillCD>0)return;
+  skillCD=DIFF[difficulty].cd;
+  playerHP=Math.min(100,playerHP+30);
+  enemyHP-=40;
+  updateUI();
+};
+
+/* ===== 敵ターン ===== */
+function enemyTurn(){
+  skillCD=Math.max(0,skillCD-1);
+  let dmg=(15+stage*2)*DIFF[difficulty].atk;
+  playerHP-=dmg;
+  if(playerHP<=0)return endGame();
+  updateUI();
+}
+
+/* ===== UI ===== */
+function updateUI(){
+  document.getElementById("hp").style.width=playerHP+"%";
+  document.getElementById("enemy").style.width=enemyHP+"%";
+  document.getElementById("stage").textContent=stage;
+  document.getElementById("skillBtn").textContent=
+    skillCD>0?`SKILL (${skillCD})`:"SKILL READY";
+}
+
+/* ===== 終了 ===== */
+function endGame(){
+  document.getElementById("result").style.display="flex";
+  let rank="C";
+  if(score>3000)rank="S";
+  else if(score>2000)rank="A";
+  else if(score>1000)rank="B";
+  document.getElementById("rank").textContent="RANK "+rank;
+  document.getElementById("scoreText").textContent="SCORE "+score;
+}
+</script>
+</body>
+</html>
