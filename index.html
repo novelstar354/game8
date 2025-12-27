@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>PUZZLE BATTLE ULTIMATE</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
 <style>
 body{margin:0;background:#111;color:#fff;font-family:sans-serif;overflow:hidden}
 #top{display:flex;justify-content:space-between;padding:6px;background:#222;font-size:12px}
@@ -12,39 +13,73 @@ body{margin:0;background:#111;color:#fff;font-family:sans-serif;overflow:hidden}
 #enemyBar>div{background:linear-gradient(to right,#f33,#a00)}
 
 #enemyInfo span{padding:2px 5px;border-radius:6px;margin:1px;font-size:11px}
-.absorb{background:#0ff;color:#000}
-.reflect{background:#f55}
-.null{background:#aaa;color:#000}
-.weak{background:#ff0;color:#000}
 
-#board{width:95vw;max-width:420px;height:360px;margin:auto;
-display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(5,1fr);gap:4px}
-.orb{border-radius:50%;transition:.2s;box-shadow:inset -3px -3px 6px #0008,inset 3px 3px 6px #fff3}
-.fire{background:#f44}.water{background:#48f}.wood{background:#4f4}.light{background:#ff4}.dark{background:#a6f}
+#board{
+  width:95vw;max-width:420px;height:360px;
+  margin:auto;
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  grid-template-rows:repeat(5,1fr);
+  gap:4px
+}
+
+.orb{
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:26px;
+  text-shadow:0 0 6px #000;
+  transition:.2s;
+}
+
+.fire{background:#f44}
+.water{background:#48f}
+.wood{background:#4f4}
+.light{background:#ff4}
+.dark{background:#a6f}
 
 #ui{display:flex;justify-content:space-around;padding:6px}
 button{padding:6px 12px;border:none;border-radius:20px;background:#333;color:#fff}
 button:disabled{opacity:.4}
 
 #combo{position:fixed;top:55px;left:10px;font-size:22px;color:#ffd}
-#damage{position:fixed;font-size:26px;color:#ff6666;pointer-events:none}
-#turn{position:fixed;top:40%;width:100%;text-align:center;font-size:40px;opacity:0;transition:.4s}
 
 #menu,#result{
-position:fixed;inset:0;background:#000e;
-display:flex;flex-direction:column;align-items:center;justify-content:center
+position:fixed;inset:0;
+background:#000e;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
 }
-.hidden{display:none}
+
+#result{display:none}
+
+.effect{
+  position:fixed;
+  pointer-events:none;
+  font-size:40px;
+  animation:pop .6s ease-out forwards;
+}
+@keyframes pop{
+  0%{transform:scale(.5);opacity:0}
+  50%{transform:scale(1.4);opacity:1}
+  100%{transform:scale(2);opacity:0}
+}
+.fireFX{color:#ff5533}
+.waterFX{color:#55ccff}
+.woodFX{color:#55ff55}
+.lightFX{color:#ffff88}
+.darkFX{color:#aa66ff}
 </style>
 </head>
+
 <body>
 
 <div id="menu">
 <h2>PUZZLE BATTLE</h2>
-<button onclick="start('easy')">EASY</button>
-<button onclick="start('normal')">NORMAL</button>
-<button onclick="start('hard')">HARD</button>
-<button onclick="start('lunatic')" style="background:#a00">LUNATIC</button>
+<button onclick="start()">START</button>
 <button onclick="loadGame()">LOAD</button>
 <button onclick="clearSave()">DELETE SAVE</button>
 </div>
@@ -59,15 +94,15 @@ display:flex;flex-direction:column;align-items:center;justify-content:center
 </div>
 
 <div id="ui">
-<button id="s1" onclick="useSkill(1)">SKILL1</button>
-<button id="s2" onclick="useSkill(2)">SKILL2</button>
-<button id="s3" onclick="useSkill(3)">SKILL3</button>
+<button onclick="useSkill(1)">SKILL1</button>
+<button onclick="useSkill(2)">SKILL2</button>
+<button onclick="useSkill(3)">SKILL3</button>
 </div>
 
 <div id="combo"></div>
 <div id="board"></div>
 
-<div id="result" class="hidden">
+<div id="result">
 <h2 id="resText"></h2>
 <p id="scoreText"></p>
 <button onclick="retry()">RETRY</button>
@@ -75,23 +110,28 @@ display:flex;flex-direction:column;align-items:center;justify-content:center
 </div>
 
 <script>
-const R=5,C=6,colors=["fire","water","wood","light","dark"];
-let board=[],hp=100,maxHp=100,enemyHP=100,stage=1,combo=0,maxCombo=0;
-let diff="normal",score=0;
-let cool=[0,0,0];
+const R=5,C=6;
+const colors=["fire","water","wood","light","dark"];
+const icons={fire:"🔥",water:"💧",wood:"🌿",light:"✨",dark:"🌑"};
+const effects={
+ fire:"fireFX",water:"waterFX",wood:"woodFX",light:"lightFX",dark:"darkFX"
+};
 
-function start(d){
-diff=d;
+let board=[],hp=100,enemyHP=100,stage=1,combo=0,maxCombo=0,score=0;
+let enemy={},cool=[0,0,0];
+
+function start(){
 document.getElementById("menu").style.display="none";
-document.getElementById("result").classList.add("hidden");
-stage=1;score=0;maxCombo=0;
+document.getElementById("result").style.display="none";
+hp=100;stage=1;score=0;maxCombo=0;
 newEnemy();makeBoard();update();
 }
 
+function rand(){return colors[Math.floor(Math.random()*5)];}
+
 function newEnemy(){
-let mul=1+stage*0.25;
 enemy={
-hp:Math.floor(200*mul),
+hp:200+stage*80,
 atk:10+stage*2,
 absorb:rand(),
 reflect:rand(),
@@ -99,17 +139,11 @@ null:rand(),
 weak:rand()
 };
 enemyHP=enemy.hp;
-updateEnemyInfo();
-}
-
-function rand(){return colors[Math.random()*5|0];}
-
-function updateEnemyInfo(){
-document.getElementById("enemyInfo").innerHTML=
-`<span class="absorb">吸:${enemy.absorb}</span>
-<span class="reflect">反:${enemy.reflect}</span>
-<span class="null">無:${enemy.null}</span>
-<span class="weak">弱:${enemy.weak}</span>`;
+enemyInfo.innerHTML=
+`<span>吸:${icons[enemy.absorb]}</span>
+<span>反:${icons[enemy.reflect]}</span>
+<span>無:${icons[enemy.null]}</span>
+<span>弱:${icons[enemy.weak]}</span>`;
 }
 
 function makeBoard(){
@@ -122,14 +156,17 @@ draw();
 }
 
 function draw(){
-const b=document.getElementById("board");b.innerHTML="";
+boardDiv.innerHTML="";
 for(let r=0;r<R;r++)for(let c=0;c<C;c++){
 let d=document.createElement("div");
 d.className="orb "+board[r][c];
-d.dataset.r=r;d.dataset.c=c;
-b.appendChild(d);
+d.textContent=icons[board[r][c]];
+d.dataset.r=r; d.dataset.c=c;
+boardDiv.appendChild(d);
 }
 }
+
+const boardDiv=document.getElementById("board");
 
 let drag=null;
 document.addEventListener("pointerdown",e=>{
@@ -143,10 +180,20 @@ let r1=+drag.dataset.r,c1=+drag.dataset.c;
 let r2=+t.dataset.r,c2=+t.dataset.c;
 if(Math.abs(r1-r2)+Math.abs(c1-c2)==1){
 [board[r1][c1],board[r2][c2]]=[board[r2][c2],board[r1][c1]];
-drag=t;draw();
+drag=t; draw();
 }
 });
 document.addEventListener("pointerup",()=>{drag=null;resolve();});
+
+function showEffect(type){
+const e=document.createElement("div");
+e.className="effect "+effects[type];
+e.textContent=icons[type];
+e.style.left="50%";
+e.style.top="45%";
+document.body.appendChild(e);
+setTimeout(()=>e.remove(),600);
+}
 
 function resolve(){
 let hit=[];
@@ -157,8 +204,7 @@ hit.push([r,c],[r,c+1],[r,c+2]);
 if(!hit.length){enemyTurn();return;}
 
 combo++; maxCombo=Math.max(maxCombo,combo);
-document.getElementById("combo").textContent=combo+" COMBO!";
-setTimeout(()=>document.getElementById("combo").textContent="",500);
+document.getElementById("combo").textContent=combo+" COMBO";
 
 let type=board[hit[0][0]][hit[0][1]];
 let dmg=hit.length*5*(1+combo*0.3);
@@ -171,6 +217,7 @@ if(type==enemy.weak)dmg*=2;
 enemyHP-=Math.floor(dmg);
 score+=Math.max(0,Math.floor(dmg));
 
+showEffect(type);
 setTimeout(()=>fall(),200);
 }
 
@@ -197,53 +244,52 @@ if(hp<=0){gameOver();return;}
 update();
 }
 
-function gameOver(){
-save();
-document.getElementById("resText").textContent="GAME OVER";
-document.getElementById("scoreText").textContent=
-`SCORE: ${score} / MAX COMBO: ${maxCombo} / STAGE ${stage}`;
-document.getElementById("result").classList.remove("hidden");
-}
-
 function update(){
 document.getElementById("hp").style.width=Math.max(hp,0)+"%";
 document.getElementById("enemy").style.width=Math.max(enemyHP/enemy.hp*100,0)+"%";
 document.getElementById("stage").textContent="STAGE "+stage;
-if(enemyHP<=0){
-stage++; newEnemy();
-}
+if(enemyHP<=0){stage++;newEnemy();}
 save();
 }
 
+function gameOver(){
+save();
+document.getElementById("resText").textContent="GAME OVER";
+document.getElementById("scoreText").textContent=
+`SCORE:${score} / MAX COMBO:${maxCombo} / STAGE:${stage}`;
+document.getElementById("result").style.display="flex";
+}
+
 function useSkill(n){
-if(cool[n-1]>0)return;
 if(n==1)enemyHP-=60;
-if(n==2)hp=Math.min(maxHp,hp+30);
+if(n==2)hp=Math.min(100,hp+30);
 if(n==3){
 for(let r=0;r<R;r++)for(let c=0;c<C;c++)
 if(board[r][c]==enemy.reflect)board[r][c]=enemy.weak;
 }
-cool[n-1]=[3,5,6][n-1];
 update();
 }
 
 function save(){
 localStorage.setItem("puzzleSave",JSON.stringify({
-hp,stage,enemyHP,score,maxCombo,cool
+hp,stage,enemyHP,score,maxCombo
 }));
 }
 
 function loadGame(){
 let d=JSON.parse(localStorage.getItem("puzzleSave"));
 if(!d)return alert("セーブなし");
-({hp,stage,enemyHP,score,maxCombo,cool}=d);
+({hp,stage,enemyHP,score,maxCombo}=d);
 document.getElementById("menu").style.display="none";
-newEnemy();
-update();
+newEnemy();update();
+}
+
+function clearSave(){
+localStorage.removeItem("puzzleSave");
+alert("削除しました");
 }
 
 function retry(){location.reload();}
-function clearSave(){localStorage.removeItem("puzzleSave");alert("削除しました");}
 </script>
 </body>
 </html>
