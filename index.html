@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>PUZZLE BATTLE ULTIMATE+</title>
+<title>PUZZLE BATTLE ULTIMATE</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 body{margin:0;background:#111;color:#fff;font-family:sans-serif;overflow:hidden}
@@ -11,10 +11,9 @@ body{margin:0;background:#111;color:#fff;font-family:sans-serif;overflow:hidden}
 .bar>div{height:100%;background:linear-gradient(to right,#0f0,#6f6)}
 #enemyBar>div{background:linear-gradient(to right,#f33,#a00)}
 
-#enemyInfo{font-size:11px;text-align:right}
-.badge{padding:2px 6px;border-radius:6px;margin:1px;display:inline-block}
+#enemyInfo span{padding:2px 5px;border-radius:6px;margin:1px;font-size:11px}
 .absorb{background:#0ff;color:#000}
-.reflect{background:#f66}
+.reflect{background:#f55}
 .null{background:#aaa;color:#000}
 .weak{background:#ff0;color:#000}
 
@@ -24,7 +23,7 @@ display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(5,1fr
 .fire{background:#f44}.water{background:#48f}.wood{background:#4f4}.light{background:#ff4}.dark{background:#a6f}
 
 #ui{display:flex;justify-content:space-around;padding:6px}
-button{padding:6px 10px;border:none;border-radius:14px;background:#333;color:#fff}
+button{padding:6px 12px;border:none;border-radius:20px;background:#333;color:#fff}
 button:disabled{opacity:.4}
 
 #combo{position:fixed;top:60px;left:10px;font-size:22px;color:#ffd}
@@ -43,6 +42,8 @@ button:disabled{opacity:.4}
 <button onclick="start('normal')">NORMAL</button>
 <button onclick="start('hard')">HARD</button>
 <button onclick="start('lunatic')" style="background:#a00">LUNATIC</button>
+<button onclick="loadGame()">LOAD</button>
+<button onclick="clearSave()">DELETE SAVE</button>
 </div>
 
 <div id="top">
@@ -66,18 +67,19 @@ button:disabled{opacity:.4}
 
 <div id="result" class="hidden">
 <h2 id="resText"></h2>
-<button onclick="location.reload()">RETRY</button>
+<button onclick="retry()">RETRY</button>
+<button onclick="location.reload()">TITLE</button>
 </div>
 
 <script>
-const R=5,C=6;
-const colors=["fire","water","wood","light","dark"];
+const R=5,C=6,colors=["fire","water","wood","light","dark"];
 let board=[],hp=100,enemyHP=100,stage=1,combo=0;
 let diff="normal",cool=[0,0,0];
 
 function start(d){
 diff=d;
 document.getElementById("menu").style.display="none";
+document.getElementById("result").classList.add("hidden");
 newEnemy();makeBoard();update();
 }
 
@@ -95,18 +97,16 @@ updateEnemyInfo();
 
 function updateEnemyInfo(){
 document.getElementById("enemyInfo").innerHTML=
-`<span class="badge absorb">吸:${enemy.absorb}</span>
-<span class="badge reflect">反:${enemy.reflect}</span>
-<span class="badge null">無:${enemy.null}</span>
-<span class="badge weak">弱:${enemy.weak}</span>`;
+`<span class="absorb">吸:${enemy.absorb}</span>
+<span class="reflect">反:${enemy.reflect}</span>
+<span class="null">無:${enemy.null}</span>
+<span class="weak">弱:${enemy.weak}</span>`;
 }
 
 function makeBoard(){
 board=[];
-for(let r=0;r<R;r++){
-board[r]=[];
-for(let c=0;c<C;c++)board[r][c]=colors[Math.random()*5|0];
-}
+for(let r=0;r<R;r++){board[r]=[];
+for(let c=0;c<C;c++)board[r][c]=colors[Math.random()*5|0];}
 draw();
 }
 
@@ -159,7 +159,7 @@ if(type==enemy.weak)dmg*=2;
 enemyHP-=Math.floor(dmg);
 showDamage(dmg);
 
-setTimeout(()=>{fall();},200);
+setTimeout(()=>fall(),200);
 }
 
 function fall(){
@@ -171,34 +171,26 @@ if(board[rr][c]){
 board[r][c]=board[rr][c];
 board[rr][c]=null;
 break;
-}
-}
+}}
 if(!board[r][c])board[r][c]=colors[Math.random()*5|0];
-}
-}
+}}
 draw();
 setTimeout(()=>resolve(),200);
 }
 
 function showDamage(d){
 let e=document.createElement("div");
-e.id="damage";
-e.textContent=Math.floor(d);
-e.style.left="50%";
-e.style.top="45%";
+e.id="damage";e.textContent=Math.floor(d);
+e.style.left="50%";e.style.top="45%";
 document.body.appendChild(e);
 setTimeout(()=>e.remove(),700);
 }
 
 function useSkill(n){
 if(cool[n-1]>0)return;
-if(n==1){ // 全消し
-enemyHP-=60;
-}
-if(n==2){ // 回復
-hp=Math.min(100,hp+30);
-}
-if(n==3){ // 変換
+if(n==1)enemyHP-=60;
+if(n==2)hp=Math.min(100,hp+30);
+if(n==3){
 for(let r=0;r<R;r++)for(let c=0;c<C;c++)
 if(board[r][c]==enemy.reflect)board[r][c]=enemy.weak;
 }
@@ -216,6 +208,20 @@ document.getElementById("s3").textContent="SKILL3("+cool[2]+")";
 cool=cool.map(c=>Math.max(0,c-1));
 if(enemyHP<=0){stage++;newEnemy();}
 }
+
+function save(){
+localStorage.setItem("puzzleSave",JSON.stringify({hp,stage,enemyHP}));
+}
+function loadGame(){
+let d=JSON.parse(localStorage.getItem("puzzleSave")||"null");
+if(!d)return alert("セーブなし");
+hp=d.hp;stage=d.stage;enemyHP=d.enemyHP;
+document.getElementById("menu").style.display="none";
+makeBoard();update();
+}
+function clearSave(){localStorage.removeItem("puzzleSave");alert("削除しました");}
+
+function retry(){location.reload();}
 </script>
 </body>
 </html>
