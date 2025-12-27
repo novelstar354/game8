@@ -8,7 +8,7 @@
 *{box-sizing:border-box;touch-action:none;}
 body{margin:0;background:#111;color:#fff;font-family:sans-serif;overflow:hidden}
 
-/* ===== UI ===== */
+/* UI */
 #top{display:flex;justify-content:space-between;padding:6px;background:#222}
 .bar{width:110px;height:10px;background:#333;border-radius:10px;overflow:hidden}
 .bar>div{height:100%;background:linear-gradient(to right,#0f0,#6f6)}
@@ -23,7 +23,7 @@ body{margin:0;background:#111;color:#fff;font-family:sans-serif;overflow:hidden}
   gap:4px;
 }
 
-/* ===== ORB ===== */
+/* ORB */
 .orb{
   position:relative;
   border-radius:50%;
@@ -66,19 +66,28 @@ body{margin:0;background:#111;color:#fff;font-family:sans-serif;overflow:hidden}
 }
 
 #difficultyScreen,#result{
-  position:fixed;inset:0;background:#000c;
-  display:flex;flex-direction:column;
-  justify-content:center;align-items:center;
+  position:fixed;inset:0;
+  background:#000c;
+  display:none;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
   z-index:999;
 }
-button{padding:12px 24px;border-radius:20px;border:none;margin:6px}
+
+button{
+  padding:12px 24px;
+  border-radius:20px;
+  border:none;
+  margin:6px;
+}
 </style>
 </head>
 <body>
 
 <!-- 難易度 -->
 <div id="difficultyScreen">
-  <h1>難易度選択</h1>
+  <h1>難易度を選択</h1>
   <button onclick="setDifficulty('easy')">EASY</button>
   <button onclick="setDifficulty('normal')">NORMAL</button>
   <button onclick="setDifficulty('hard')">HARD</button>
@@ -106,33 +115,33 @@ button{padding:12px 24px;border-radius:20px;border:none;margin:6px}
 </div>
 
 <script>
-/* ===== 設定 ===== */
+/* ========= 定数 ========= */
 const ROW=5,COL=6;
 const colors=["fire","water","wood","light","dark"];
 const icons={fire:"🔥",water:"💧",wood:"🌿",light:"✨",dark:"🌙"};
 const weak={fire:"wood",wood:"water",water:"fire",light:"dark",dark:"light"};
 
 const DIFF={
- easy:{hp:0.7,atk:0.7,cd:2,score:0.8},
- normal:{hp:1,atk:1,cd:3,score:1},
- hard:{hp:1.4,atk:1.3,cd:4,score:1.3},
- hell:{hp:1.8,atk:1.6,cd:5,score:1.6}
+  easy:{hp:0.7,atk:0.7,cd:2,score:0.8},
+  normal:{hp:1,atk:1,cd:3,score:1},
+  hard:{hp:1.4,atk:1.3,cd:4,score:1.3},
+  hell:{hp:1.8,atk:1.6,cd:5,score:1.6}
 };
 
+/* ========= 状態 ========= */
 let difficulty="normal";
 let board=[],stage=1,playerHP=100,enemyHP=100;
-let score=0,combo=0,skillCD=0;
-let enemyState={};
+let score=0,skillCD=0;
 
-/* ===== 難易度 ===== */
+/* ========= 初期化 ========= */
 function setDifficulty(d){
   difficulty=d;
   document.getElementById("difficultyScreen").style.display="none";
   init();
 }
 
-/* ===== 初期化 ===== */
 function init(){
+  document.getElementById("result").style.display="none";
   board=[];
   for(let r=0;r<ROW;r++){
     board[r]=[];
@@ -143,17 +152,12 @@ function init(){
   updateUI();
 }
 
-/* ===== 敵生成 ===== */
+/* ========= 敵生成 ========= */
 function newEnemy(){
   enemyHP=Math.floor((120+stage*40)*DIFF[difficulty].hp);
-  enemyState={
-    absorb:Math.random()<0.3?colors[Math.floor(Math.random()*5)]:null,
-    reflect:Math.random()<0.3,
-    nullify:Math.random()<0.3?colors[Math.floor(Math.random()*5)]:null
-  };
 }
 
-/* ===== 描画 ===== */
+/* ========= 描画 ========= */
 function draw(){
   const b=document.getElementById("board");
   b.innerHTML="";
@@ -161,12 +165,13 @@ function draw(){
     const d=document.createElement("div");
     d.className="orb "+board[r][c];
     d.textContent=icons[board[r][c]];
-    d.dataset.r=r; d.dataset.c=c;
+    d.dataset.r=r;
+    d.dataset.c=c;
     b.appendChild(d);
   }
 }
 
-/* ===== 操作 ===== */
+/* ========= 入力 ========= */
 let drag=false,last=null;
 document.addEventListener("pointerdown",e=>{
   if(!e.target.classList.contains("orb"))return;
@@ -186,12 +191,13 @@ document.addEventListener("pointermove",e=>{
 });
 document.addEventListener("pointerup",()=>{drag=false;check();});
 
-/* ===== 判定 ===== */
+/* ========= 判定 ========= */
 function check(){
   let del=[];
   for(let r=0;r<ROW;r++)for(let c=0;c<COL-2;c++)
     if(board[r][c]==board[r][c+1]&&board[r][c]==board[r][c+2])
       del.push([r,c],[r,c+1],[r,c+2]);
+
   for(let c=0;c<COL;c++)for(let r=0;r<ROW-2;r++)
     if(board[r][c]==board[r+1][c]&&board[r][c]==board[r+2][c])
       del.push([r,c],[r+1,c],[r+2,c]);
@@ -202,9 +208,6 @@ function check(){
   del.forEach(p=>{
     let t=board[p[0]][p[1]];
     let base=10;
-    if(enemyState.nullify===t) base=0;
-    if(enemyState.absorb===t){enemyHP+=base;base=0;}
-    if(enemyState.reflect) playerHP-=base/2;
     if(weak[t]) base*=1.5;
     dmg+=base;
     board[p[0]][p[1]]=null;
@@ -212,13 +215,12 @@ function check(){
 
   enemyHP-=dmg;
   score+=Math.floor(dmg*10*DIFF[difficulty].score);
-  fall();
-  draw();
 
+  fall(); draw();
   if(enemyHP<=0){stage++;newEnemy();}
 }
 
-/* ===== 落下 ===== */
+/* ========= 落下 ========= */
 function fall(){
   for(let c=0;c<COL;c++){
     for(let r=ROW-1;r>=0;r--){
@@ -236,7 +238,7 @@ function fall(){
   }
 }
 
-/* ===== スキル ===== */
+/* ========= スキル ========= */
 document.getElementById("skillBtn").onclick=()=>{
   if(skillCD>0)return;
   skillCD=DIFF[difficulty].cd;
@@ -245,16 +247,15 @@ document.getElementById("skillBtn").onclick=()=>{
   updateUI();
 };
 
-/* ===== 敵ターン ===== */
+/* ========= 敵ターン ========= */
 function enemyTurn(){
   skillCD=Math.max(0,skillCD-1);
-  let dmg=(15+stage*2)*DIFF[difficulty].atk;
-  playerHP-=dmg;
+  playerHP-=Math.floor((15+stage*2)*DIFF[difficulty].atk);
   if(playerHP<=0)return endGame();
   updateUI();
 }
 
-/* ===== UI ===== */
+/* ========= UI ========= */
 function updateUI(){
   document.getElementById("hp").style.width=playerHP+"%";
   document.getElementById("enemy").style.width=enemyHP+"%";
@@ -263,7 +264,7 @@ function updateUI(){
     skillCD>0?`SKILL (${skillCD})`:"SKILL READY";
 }
 
-/* ===== 終了 ===== */
+/* ========= 終了 ========= */
 function endGame(){
   document.getElementById("result").style.display="flex";
   let rank="C";
@@ -273,6 +274,9 @@ function endGame(){
   document.getElementById("rank").textContent="RANK "+rank;
   document.getElementById("scoreText").textContent="SCORE "+score;
 }
+
+/* 初期表示 */
+document.getElementById("difficultyScreen").style.display="flex";
 </script>
 </body>
 </html>
