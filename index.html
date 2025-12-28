@@ -2,252 +2,371 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>PUZZLE BATTLE ULTIMATE+</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PUZZLE BATTLE ULTIMATE</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <style>
-body{margin:0;background:#111;color:#fff;font-family:sans-serif;overflow:hidden}
-#top{display:flex;justify-content:space-between;padding:6px;background:#222}
+*{box-sizing:border-box;touch-action:none;}
+body{margin:0;background:#111;color:#fff;font-family:sans-serif;overflow:hidden;}
+#top{display:flex;justify-content:space-between;padding:6px;background:#222;font-size:14px;}
 .bar{width:110px;height:10px;background:#333;border-radius:10px;overflow:hidden}
 .bar>div{height:100%;background:linear-gradient(to right,#0f0,#6f6)}
 #enemyBar>div{background:linear-gradient(to right,#f33,#a00)}
-
-#board{
- width:95vw;max-width:420px;height:360px;
- margin:auto;display:grid;
- grid-template-columns:repeat(6,1fr);
- grid-template-rows:repeat(5,1fr);
- gap:4px;
-}
-.orb{
- border-radius:50%;
- display:flex;align-items:center;justify-content:center;
- font-size:24px;
- cursor:pointer;
-}
-.fire{background:#ff6666}
-.water{background:#4fa3ff}
-.wood{background:#44cc77}
-.light{background:#ffe066}
-.dark{background:#8c6cff}
-
-#combo{position:absolute;top:60px;width:100%;text-align:center;font-size:36px;color:gold}
-#turnText{position:fixed;top:40%;width:100%;text-align:center;font-size:42px}
-
-.effect{
- position:fixed;inset:0;pointer-events:none;
- animation:fade .6s forwards;
-}
-.absorbFx{
- background:radial-gradient(circle at center, #00ffaa99 0%, #000 70%);
-}
-.comboFx{
- position:fixed;inset:0;pointer-events:none;
- z-index:60;
- animation:fadeCombo .5s forwards;
-}
-.combo1{background:radial-gradient(circle,#fff5,transparent 60%)}
-.combo2{background:radial-gradient(circle,#ffd70099,transparent 70%)}
-.combo3{background:radial-gradient(circle,#ff5500aa,transparent 70%)}
-.combo4{background:linear-gradient(45deg,#ff0a,#f0f,#0ff,#ff0a)}
-@keyframes fade{from{opacity:1}to{opacity:0}}
-@keyframes fadeCombo{from{opacity:1}to{opacity:0}}
-
-#skills{text-align:center;margin:6px;}
-button{padding:8px 14px;border-radius:20px;border:none;background:#333;color:#fff;margin:4px}
-
-#result{
- position:fixed;inset:0;background:rgba(0,0,0,.9);
- display:none;flex-direction:column;justify-content:center;align-items:center;
-}
-.rank{font-size:64px;color:gold;text-shadow:0 0 20px gold}
+#timer{text-align:center;font-size:18px;margin:4px}
+#board{width:95vw;max-width:420px;height:360px;margin:auto;display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(5,1fr);gap:4px;}
+.orb{position: relative;width:100%;height:100%;border-radius:50%;backdrop-filter: blur(4px);background: rgba(255,255,255,0.15);box-shadow:inset 0 0 10px rgba(255,255,255,0.6), inset -6px -6px 10px rgba(0,0,0,0.3),0 4px 8px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;font-size:26px;color:white;text-shadow:0 0 6px rgba(255,255,255,.8);transition:transform .1s, filter .1s;}
+.orb:active{transform:scale(0.92);filter:brightness(1.3);}
+.fire{background:linear-gradient(135deg,#ff5a5a,#ff9966);}
+.water{background:linear-gradient(135deg,#4facfe,#00f2fe);}
+.wood{background:linear-gradient(135deg,#43e97b,#38f9d7);}
+.light{background:linear-gradient(135deg,#fff7a1,#ffe066);}
+.dark{background:linear-gradient(135deg,#a18cd1,#6f42c1);}
+.orb::after{content:"";position:absolute;top:8%;left:12%;width:40%;height:40%;border-radius:50%;background:rgba(255,255,255,0.35);filter:blur(4px);}
+#combo{position:absolute;top:70px;width:100%;text-align:center;font-size:40px;color:gold;opacity:0;transition:.3s;}
+#turnText{position:fixed;top:40%;width:100%;text-align:center;font-size:48px;font-weight:bold;opacity:0;pointer-events:none;transition:.4s;}
+.turn-player{color:#4af;text-shadow:0 0 20px #4af;}
+.turn-enemy{color:#f44;text-shadow:0 0 20px #f44;}
+#result{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;justify-content:center;align-items:center;text-align:center;}
+button{padding:10px 16px;border-radius:20px;border:none;background:#333;color:#fff;}
+#difficulty{position:fixed;inset:0;background:rgba(0,0,0,.9);display:flex;justify-content:center;align-items:center;flex-direction:column;}
+#difficulty button{margin:6px;padding:12px 24px;font-size:18px;}
+#skillBar{position:fixed;bottom:10px;width:100%;text-align:center;}
+.skillBtn{margin:0 6px;padding:8px 16px;border-radius:10px;border:none;background:#555;color:#fff;}
+#effectText{position:fixed;top:120px;width:100%;text-align:center;font-size:32px;font-weight:bold;color:cyan;opacity:0;pointer-events:none;transition:0.5s;}
 </style>
 </head>
 <body>
 
-<div id="top">
- <div>HP<div class="bar"><div id="hp"></div></div></div>
- <div>STAGE <span id="stage">1</span></div>
- <div>ENEMY<div class="bar" id="enemyBar"><div id="enemy"></div></div></div>
+<div id="difficulty">
+  <h2>SELECT DIFFICULTY</h2>
+  <button onclick="startGame('easy')">EASY</button>
+  <button onclick="startGame('normal')">NORMAL</button>
+  <button onclick="startGame('hard')">HARD</button>
+  <button onclick="startGame('lunatic')">LUNATIC</button>
 </div>
 
+<div id="top">
+  <div>HP<div class="bar"><div id="hp"></div></div></div>
+  <div>STAGE <span id="stage">1</span></div>
+  <div>ENEMY<div class="bar" id="enemyBar"><div id="enemy"></div></div></div>
+</div>
+
+<div id="timer">TIME: 30</div>
 <div id="combo"></div>
+<div id="turnText"></div>
+<div id="effectText"></div>
 <div id="board"></div>
 
-<div id="skills">
- <button onclick="useHeal()">❤️ 回復</button>
- <button onclick="useBomb()">💥 ボム</button>
- <button onclick="useBoost()">⚡ 強化</button>
+<div id="skillBar">
+  <button class="skillBtn" id="skill1" onclick="useSkill(1)">全体攻撃</button>
+  <button class="skillBtn" id="skill2" onclick="useSkill(2)">回復</button>
+</div>
+
+<div style="text-align:center">
+  <button onclick="saveGame()">💾 SAVE</button>
+  <button onclick="deleteSave()">🗑 RESET</button>
 </div>
 
 <div id="result">
- <div class="rank" id="rankText"></div>
- <p id="resultInfo"></p>
- <button onclick="location.reload()">RETRY</button>
+  <div>
+    <h2 id="resultText"></h2>
+    <button onclick="location.reload()">RETRY</button>
+  </div>
 </div>
 
 <script>
 const ROW=5,COL=6;
 const colors=["fire","water","wood","light","dark"];
-const weakness={fire:"wood",wood:"water",water:"fire",light:"dark",dark:"light"};
+const SAVE_KEY="PUZZLE_ULTIMATE_SAVE";
 
-let board=[],stage=1;
-let playerHP=100,enemyHP=100;
-let combo=0,maxCombo=0,score=0;
-let difficulty="normal";
-let boostNext=false;
+let board=[],drag=false,last=null;
+let stage=1,playerHP=100,enemyHP=100;
+let combo=0,timer=30,timerOn=false,enemyType="normal",enemyAttr="fire";
+let timerInterval=null, difficulty="normal";
+let skillCooldown=[0,0];
 
-let cdHeal=0,cdBomb=0,cdBoost=0;
+const ATTR_WEAK={fire:"wood",water:"fire",wood:"water",light:"dark",dark:"light"};
+const ATTR_ABSORB={fire:"water",water:"wood",wood:"fire",light:"dark",dark:"light"};
 
-function rand(){return colors[Math.floor(Math.random()*5)]}
+function startGame(diff){
+  difficulty=diff;
+  document.getElementById("difficulty").style.display="none";
+  if(!loadGame()) init();
+  updateSkillUI();
+}
+
 function init(){
- board=[...Array(ROW)].map(()=>Array(COL).fill().map(rand));
- newEnemy();
- draw();
- updateUI();
+  board=[];
+  for(let r=0;r<ROW;r++){
+    board[r]=[];
+    for(let c=0;c<COL;c++) board[r][c]=rand();
+  }
+  newEnemy(); draw(); updateUI();
 }
 
 function newEnemy(){
- enemyHP=120+stage*40;
- enemyAttr=colors[Math.floor(Math.random()*5)];
+  let baseHP=100+stage*20;
+  if(difficulty==="easy") baseHP*=0.8;
+  if(difficulty==="hard") baseHP*=1.3;
+  if(difficulty==="lunatic") baseHP*=2;
+  enemyHP=baseHP;
+  enemyType=stage%5===0?"boss":"normal";
+  enemyAttr=colors[Math.floor(Math.random()*colors.length)];
+  if(enemyType==="boss") enemyHP*=2;
 }
 
 function draw(){
- const b=document.getElementById("board");
- b.innerHTML="";
- for(let r=0;r<ROW;r++)for(let c=0;c<COL;c++){
-  let d=document.createElement("div");
-  d.className="orb "+board[r][c];
-  d.dataset.r=r; d.dataset.c=c;
-  b.appendChild(d);
- }
+  const b=document.getElementById("board");
+  b.innerHTML="";
+  for(let r=0;r<ROW;r++)for(let c=0;c<COL;c++){
+    const d=document.createElement("div");
+    d.className="orb "+board[r][c];
+    d.dataset.r=r; d.dataset.c=c;
+    b.appendChild(d);
+  }
 }
 
-let last=null;
 document.addEventListener("pointerdown",e=>{
- if(!e.target.classList.contains("orb"))return;
- last={r:+e.target.dataset.r,c:+e.target.dataset.c};
+  if(!e.target.classList.contains("orb"))return;
+  drag=true;
+  last={r:+e.target.dataset.r,c:+e.target.dataset.c};
+  if(!timerOn) startTurn();
 });
 document.addEventListener("pointermove",e=>{
- if(!last)return;
- let t=document.elementFromPoint(e.clientX,e.clientY);
- if(!t||!t.classList.contains("orb"))return;
- let r=+t.dataset.r,c=+t.dataset.c;
- if(Math.abs(r-last.r)+Math.abs(c-last.c)==1){
-  [board[r][c],board[last.r][last.c]]=[board[last.r][last.c],board[r][c]];
-  last={r,c}; draw();
- }
+  if(!drag)return;
+  const t=document.elementFromPoint(e.clientX,e.clientY);
+  if(!t||!t.classList.contains("orb"))return;
+  let r=+t.dataset.r,c=+t.dataset.c;
+  if(Math.abs(r-last.r)+Math.abs(c-last.c)==1){
+    [board[r][c],board[last.r][last.c]]=[board[last.r][last.c],board[r][c]];
+    last={r,c};
+    draw();
+  }
 });
-document.addEventListener("pointerup",()=>{last=null;check();});
+document.addEventListener("pointerup",()=>{drag=false;check();});
+
+function startTurn(){
+  timerOn=true;
+  switch(difficulty){
+    case "easy": timer=40; break;
+    case "normal": timer=30; break;
+    case "hard": timer=20; break;
+    case "lunatic": timer=15; break;
+  }
+  showTurn("YOUR TURN","player");
+  startTimer();
+}
+
+function showTurn(text,type){
+  const t=document.getElementById("turnText");
+  t.textContent=text;
+  t.className=type==="player"?"turn-player":"turn-enemy";
+  t.style.opacity=1;
+  setTimeout(()=>t.style.opacity=0,800);
+}
+
+function showEffect(txt,color){
+  const e=document.getElementById("effectText");
+  e.textContent=txt;
+  e.style.color=color;
+  e.style.opacity=1;
+  e.style.transform="scale(1.2)";
+  setTimeout(()=>{
+    e.style.opacity=0;
+    e.style.transform="scale(1)";
+  },600);
+}
+
+function showOrbParticle(color){
+  const particleCount = 8; 
+  for(let i=0;i<particleCount;i++){
+    const particle=document.createElement("div");
+    particle.style.position="absolute";
+    particle.style.width="12px";
+    particle.style.height="12px";
+    particle.style.borderRadius="50%";
+    particle.style.background=colorParticleColor(color);
+    particle.style.left=50 + Math.random()*40 - 20 +"%";
+    particle.style.top=50 + Math.random()*40 - 20 +"%";
+    particle.style.pointerEvents="none";
+    particle.style.opacity=1;
+    particle.style.transform="scale(0)";
+    document.body.appendChild(particle);
+    let dx=(Math.random()-0.5)*200;
+    let dy=(Math.random()-0.5)*200;
+    particle.animate([
+      {transform:"scale(0) translate(0px,0px)", opacity:1},
+      {transform:`scale(1.5) translate(${dx}px,${dy}px)`, opacity:0}
+    ], {duration:600 + Math.random()*200, fill:"forwards"});
+    setTimeout(()=>particle.remove(), 800);
+  }
+}
+
+function colorParticleColor(color){
+  switch(color){
+    case "fire": return "rgba(255,50,0,0.9)";
+    case "water": return "rgba(0,180,255,0.8)";
+    case "wood": return "rgba(0,255,80,0.8)";
+    case "light": return "rgba(255,255,120,0.9)";
+    case "dark": return "rgba(180,0,255,0.8)";
+    default: return "white";
+  }
+}
+
+function getDamage(color){
+  let dmg=5;
+  let effectTxt="",effectColor="";
+  if(difficulty==="easy"){
+    if(color===ATTR_WEAK[enemyAttr]){ dmg=10; effectTxt="WEAK!"; effectColor="yellow"; }
+  } else if(difficulty==="normal"){
+    if(color===ATTR_ABSORB[enemyAttr]){ dmg=0; effectTxt="ABSORB!"; effectColor="cyan"; }
+    else if(color===ATTR_WEAK[enemyAttr]){ dmg=10; effectTxt="WEAK!"; effectColor="yellow"; }
+  } else {
+    if(color===ATTR_ABSORB[enemyAttr]){ dmg=0; effectTxt="ABSORB!"; effectColor="cyan"; }
+    else if(color===enemyAttr){ dmg=0; effectTxt="REFLECT!"; effectColor="red"; }
+    else if(color===ATTR_WEAK[enemyAttr]){ dmg=10; effectTxt="WEAK!"; effectColor="yellow"; }
+    else { dmg=5; effectTxt="IMMUNE"; effectColor="gray"; }
+  }
+  if(effectTxt) showEffect(effectTxt,effectColor);
+  showOrbParticle(color);
+  return dmg;
+}
 
 function check(){
- let del=[];
- for(let r=0;r<ROW;r++)for(let c=0;c<COL-2;c++)
-  if(board[r][c]==board[r][c+1]&&board[r][c]==board[r][c+2])
-   del.push([r,c],[r,c+1],[r,c+2]);
- for(let c=0;c<COL;c++)for(let r=0;r<ROW-2;r++)
-  if(board[r][c]==board[r+1][c]&&board[r][c]==board[r+2][c])
-   del.push([r,c],[r+1,c],[r+2,c]);
+  let del=[];
+  for(let r=0;r<ROW;r++)for(let c=0;c<COL-2;c++)
+    if(board[r][c]==board[r][c+1]&&board[r][c]==board[r][c+2])
+      del.push([r,c],[r,c+1],[r,c+2]);
+  for(let c=0;c<COL;c++)for(let r=0;r<ROW-2;r++)
+    if(board[r][c]==board[r+1][c]&&board[r][c]==board[r+2][c])
+      del.push([r,c],[r+1,c],[r+2,c]);
 
- if(!del.length){combo=0;updateUI();return;}
+  if(!del.length){combo=0; return;}
 
- combo++; maxCombo=Math.max(maxCombo,combo);
- let base=del.length*5;
- let color=board[del[0][0]][del[0][1]];
- let dmg=base;
-
- // 吸収判定
- if(color===enemyAttr){
-  enemyHP+=base;
-  showAbsorb();
-  dmg=0;
- }
-
- // 弱点判定
- if(weakness[color]===enemyAttr) dmg*=1.5;
-
- // ブースト判定
- if(boostNext){dmg*=2; boostNext=false;}
-
- enemyHP-=dmg;
- score+=Math.floor(dmg*10);
-
- del.forEach(p=>board[p[0]][p[1]]=null);
- fall();
- comboEffect(combo);
- updateUI();
-
- if(enemyHP<=0){stage++;newEnemy();}
- setTimeout(check,120);
-}
-
-function showAbsorb(){
- let e=document.createElement("div");
- e.className="effect absorbFx";
- document.body.appendChild(e);
- setTimeout(()=>e.remove(),600);
-}
-
-function comboEffect(c){
- let e=document.createElement("div");
- e.className="comboFx";
- if(c>=8) e.classList.add("combo4");
- else if(c>=5) e.classList.add("combo3");
- else if(c>=3) e.classList.add("combo2");
- else e.classList.add("combo1");
- document.body.appendChild(e);
- setTimeout(()=>e.remove(),500);
+  combo++;
+  let dmg=0;
+  del.forEach(p=>{
+    let color=board[p[0]][p[1]];
+    dmg+=getDamage(color);
+    board[p[0]][p[1]]=null;
+  });
+  enemyHP-=dmg;
+  fall(); showCombo(); updateUI();
+  if(enemyHP<=0){stage++; newEnemy();}
+  saveGame();
+  setTimeout(check,150);
 }
 
 function fall(){
- for(let c=0;c<COL;c++)
-  for(let r=ROW-1;r>=0;r--)
-   if(!board[r][c]){
-    for(let rr=r-1;rr>=0;rr--)
-     if(board[rr][c]){board[r][c]=board[rr][c];board[rr][c]=null;break;}
-    if(!board[r][c]) board[r][c]=rand();
-   }
- draw();
+  for(let c=0;c<COL;c++){
+    for(let r=ROW-1;r>=0;r--){
+      if(!board[r][c]){
+        for(let rr=r-1;rr>=0;rr--){
+          if(board[rr][c]){board[r][c]=board[rr][c]; board[rr][c]=null; break;}
+        }
+        if(!board[r][c]) board[r][c]=rand();
+      }
+    }
+  }
+  draw();
+}
+
+function startTimer(){
+  if(timerInterval) clearInterval(timerInterval);
+  timerInterval=setInterval(()=>{
+    timer--;
+    document.getElementById("timer").textContent="TIME: "+timer;
+    if(timer<=0){
+      clearInterval(timerInterval); timerInterval=null;
+      enemyTurn();
+    }
+  },1000);
+}
+
+function enemyTurn(){
+  showTurn("ENEMY TURN","enemy");
+  setTimeout(()=>{
+    let base=enemyType==="boss"?25+stage*2:15+stage;
+    if(difficulty==="easy") base*=0.8;
+    if(difficulty==="hard") base*=1.3;
+    if(difficulty==="lunatic") base*=2;
+    playerHP-=Math.floor(base);
+    document.body.style.background="#400";
+    setTimeout(()=>document.body.style.background="#111",200);
+    if(playerHP<=0) gameOver();
+    else timerOn=false;
+  },700);
+}
+
+function showCombo(){
+  const c=document.getElementById("combo");
+  c.textContent=combo+" COMBO!";
+  c.style.opacity=1;
+  c.style.transform="scale(1)";
+  let shakeIntensity=0;
+  if(combo>=3 && combo<=4) shakeIntensity=2;
+  else if(combo>=5 && combo<=7) shakeIntensity=5;
+  else if(combo>=8) shakeIntensity=8;
+  if(shakeIntensity>0){
+    const boardEl=document.getElementById("board");
+    boardEl.animate([
+      {transform:"translate(0px,0px)"},
+      {transform:`translate(${shakeIntensity}px,${-shakeIntensity}px)`},
+      {transform:"translate(0px,0px)"}
+    ],{duration:200,iterations:1});
+  }
+  c.animate([{transform:"scale(1)"},{transform:"scale(1.5)"},{transform:"scale(1)"}],{duration:500,fill:"forwards"});
+  setTimeout(()=>{c.style.opacity=0;},500);
+}
+
+function useSkill(n){
+  if(skillCooldown[n-1]>0) return;
+  if(n===1){ enemyHP-=30; showEffect("SKILL!","orange"); skillCooldown[0]=3; }
+  if(n===2){ playerHP=Math.min(playerHP+30,100); showEffect("HEAL!","lime"); skillCooldown[1]=5; }
+  combo=0; updateUI(); saveGame();
+}
+
+function updateSkillUI(){
+  for(let i=0;i<2;i++){
+    let btn=document.getElementById("skill"+(i+1));
+    if(skillCooldown[i]>0){ btn.disabled=true; btn.textContent="COOL "+skillCooldown[i]; skillCooldown[i]--; }
+    else { btn.disabled=false; btn.textContent=(i===0?"全体攻撃":"回復"); }
+  }
 }
 
 function updateUI(){
- document.getElementById("hp").style.width=playerHP+"%";
- document.getElementById("enemy").style.width=enemyHP+"%";
- document.getElementById("stage").textContent=stage;
- document.getElementById("combo").textContent=combo>1?combo+" COMBO!":"";
+  document.getElementById("hp").style.width=playerHP+"%";
+  document.getElementById("enemy").style.width=enemyHP+"%";
+  document.getElementById("stage").textContent=stage;
+  updateSkillUI();
 }
 
-// スキル
-function useHeal(){if(cdHeal>0)return; playerHP=Math.min(100,playerHP+30); cdHeal=3;}
-function useBomb(){if(cdBomb>0)return; for(let i=0;i<8;i++){let r=Math.floor(Math.random()*ROW); let c=Math.floor(Math.random()*COL); board[r][c]=null;} fall(); cdBomb=4;}
-function useBoost(){if(cdBoost>0)return; boostNext=true; cdBoost=5;}
-
-setInterval(()=>{
- if(cdHeal>0) cdHeal--;
- if(cdBomb>0) cdBomb--;
- if(cdBoost>0) cdBoost--;
-},1000);
-
-// ゲームオーバー判定
-function endGame(){
- let rank="D";
- if(score>=120000) rank="S";
- else if(score>=80000) rank="A";
- else if(score>=50000) rank="B";
- else if(score>=20000) rank="C";
-
- document.getElementById("rankText").textContent=rank;
- document.getElementById("resultInfo").textContent=
- `SCORE: ${score}\nMAX COMBO: ${maxCombo}\nSTAGE: ${stage}`;
- document.getElementById("result").style.display="flex";
+function gameOver(){
+  document.getElementById("result").style.display="flex";
+  document.getElementById("resultText").textContent="GAME OVER";
+  deleteSave();
 }
 
-// 自動終了例：HP0でゲーム終了
-setInterval(()=>{
- if(playerHP<=0) endGame();
-},500);
+function saveGame(){
+  localStorage.setItem(SAVE_KEY,JSON.stringify({
+    board,stage,playerHP,enemyHP,timer,enemyAttr,enemyType,difficulty,skillCooldown
+  }));
+}
 
-// 初期化
-window.onload=()=>{init();};
+function deleteSave(){ localStorage.removeItem(SAVE_KEY); location.reload(); }
+
+function loadGame(){
+  const d=JSON.parse(localStorage.getItem(SAVE_KEY));
+  if(!d) return false;
+  board=d.board; stage=d.stage; playerHP=d.playerHP; enemyHP=d.enemyHP;
+  timer=d.timer; enemyAttr=d.enemyAttr; enemyType=d.enemyType;
+  difficulty=d.difficulty||"normal";
+  skillCooldown=d.skillCooldown||[0,0];
+  draw(); updateUI();
+  return true;
+}
+
+function rand(){return colors[Math.floor(Math.random()*colors.length)]}
 </script>
+
 </body>
 </html>
