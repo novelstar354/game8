@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>PUZZLE BATTLE ULTIMATE</title>
+<title>PUZZLE BATTLE ULTIMATE+</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body{margin:0;background:#111;color:#fff;font-family:sans-serif;overflow:hidden}
@@ -22,6 +22,7 @@ body{margin:0;background:#111;color:#fff;font-family:sans-serif;overflow:hidden}
  border-radius:50%;
  display:flex;align-items:center;justify-content:center;
  font-size:24px;
+ cursor:pointer;
 }
 .fire{background:#ff6666}
 .water{background:#4fa3ff}
@@ -39,15 +40,26 @@ body{margin:0;background:#111;color:#fff;font-family:sans-serif;overflow:hidden}
 .absorbFx{
  background:radial-gradient(circle at center, #00ffaa99 0%, #000 70%);
 }
+.comboFx{
+ position:fixed;inset:0;pointer-events:none;
+ z-index:60;
+ animation:fadeCombo .5s forwards;
+}
+.combo1{background:radial-gradient(circle,#fff5,transparent 60%)}
+.combo2{background:radial-gradient(circle,#ffd70099,transparent 70%)}
+.combo3{background:radial-gradient(circle,#ff5500aa,transparent 70%)}
+.combo4{background:linear-gradient(45deg,#ff0a,#f0f,#0ff,#ff0a)}
 @keyframes fade{from{opacity:1}to{opacity:0}}
+@keyframes fadeCombo{from{opacity:1}to{opacity:0}}
+
+#skills{text-align:center;margin:6px;}
+button{padding:8px 14px;border-radius:20px;border:none;background:#333;color:#fff;margin:4px}
 
 #result{
  position:fixed;inset:0;background:rgba(0,0,0,.9);
  display:none;flex-direction:column;justify-content:center;align-items:center;
 }
 .rank{font-size:64px;color:gold;text-shadow:0 0 20px gold}
-
-button{padding:8px 14px;border-radius:20px;border:none;background:#333;color:#fff;margin:4px}
 </style>
 </head>
 <body>
@@ -60,6 +72,12 @@ button{padding:8px 14px;border-radius:20px;border:none;background:#333;color:#ff
 
 <div id="combo"></div>
 <div id="board"></div>
+
+<div id="skills">
+ <button onclick="useHeal()">❤️ 回復</button>
+ <button onclick="useBomb()">💥 ボム</button>
+ <button onclick="useBoost()">⚡ 強化</button>
+</div>
 
 <div id="result">
  <div class="rank" id="rankText"></div>
@@ -75,10 +93,12 @@ const weakness={fire:"wood",wood:"water",water:"fire",light:"dark",dark:"light"}
 let board=[],stage=1;
 let playerHP=100,enemyHP=100;
 let combo=0,maxCombo=0,score=0;
-let difficulty="lunatic";
+let difficulty="normal";
+let boostNext=false;
+
+let cdHeal=0,cdBomb=0,cdBoost=0;
 
 function rand(){return colors[Math.floor(Math.random()*5)]}
-
 function init(){
  board=[...Array(ROW)].map(()=>Array(COL).fill().map(rand));
  newEnemy();
@@ -88,6 +108,7 @@ function init(){
 
 function newEnemy(){
  enemyHP=120+stage*40;
+ enemyAttr=colors[Math.floor(Math.random()*5)];
 }
 
 function draw(){
@@ -127,27 +148,32 @@ function check(){
   if(board[r][c]==board[r+1][c]&&board[r][c]==board[r+2][c])
    del.push([r,c],[r+1,c],[r+2,c]);
 
- if(!del.length){combo=0;return;}
+ if(!del.length){combo=0;updateUI();return;}
 
  combo++; maxCombo=Math.max(maxCombo,combo);
  let base=del.length*5;
  let color=board[del[0][0]][del[0][1]];
  let dmg=base;
 
- if(weakness[color]===enemyAttr){dmg*=1.5}
-
- // 吸収演出
+ // 吸収判定
  if(color===enemyAttr){
   enemyHP+=base;
   showAbsorb();
   dmg=0;
  }
 
+ // 弱点判定
+ if(weakness[color]===enemyAttr) dmg*=1.5;
+
+ // ブースト判定
+ if(boostNext){dmg*=2; boostNext=false;}
+
  enemyHP-=dmg;
  score+=Math.floor(dmg*10);
 
  del.forEach(p=>board[p[0]][p[1]]=null);
  fall();
+ comboEffect(combo);
  updateUI();
 
  if(enemyHP<=0){stage++;newEnemy();}
@@ -159,6 +185,17 @@ function showAbsorb(){
  e.className="effect absorbFx";
  document.body.appendChild(e);
  setTimeout(()=>e.remove(),600);
+}
+
+function comboEffect(c){
+ let e=document.createElement("div");
+ e.className="comboFx";
+ if(c>=8) e.classList.add("combo4");
+ else if(c>=5) e.classList.add("combo3");
+ else if(c>=3) e.classList.add("combo2");
+ else e.classList.add("combo1");
+ document.body.appendChild(e);
+ setTimeout(()=>e.remove(),500);
 }
 
 function fall(){
@@ -179,6 +216,18 @@ function updateUI(){
  document.getElementById("combo").textContent=combo>1?combo+" COMBO!":"";
 }
 
+// スキル
+function useHeal(){if(cdHeal>0)return; playerHP=Math.min(100,playerHP+30); cdHeal=3;}
+function useBomb(){if(cdBomb>0)return; for(let i=0;i<8;i++){let r=Math.floor(Math.random()*ROW); let c=Math.floor(Math.random()*COL); board[r][c]=null;} fall(); cdBomb=4;}
+function useBoost(){if(cdBoost>0)return; boostNext=true; cdBoost=5;}
+
+setInterval(()=>{
+ if(cdHeal>0) cdHeal--;
+ if(cdBomb>0) cdBomb--;
+ if(cdBoost>0) cdBoost--;
+},1000);
+
+// ゲームオーバー判定
 function endGame(){
  let rank="D";
  if(score>=120000) rank="S";
@@ -188,10 +237,17 @@ function endGame(){
 
  document.getElementById("rankText").textContent=rank;
  document.getElementById("resultInfo").textContent=
-  `SCORE: ${score}\nMAX COMBO: ${maxCombo}\nSTAGE: ${stage}`;
+ `SCORE: ${score}\nMAX COMBO: ${maxCombo}\nSTAGE: ${stage}`;
  document.getElementById("result").style.display="flex";
 }
 
+// 自動終了例：HP0でゲーム終了
+setInterval(()=>{
+ if(playerHP<=0) endGame();
+},500);
+
+// 初期化
+window.onload=()=>{init();};
 </script>
 </body>
 </html>
